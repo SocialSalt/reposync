@@ -7,21 +7,80 @@ import (
 	"path/filepath"
 	"strings"
 
+	xdg "github.com/adrg/xdg"
 	cli "github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v2"
 )
 
 type Repo struct {
-	Name     string
-	Excludes []string
+	Name     string   `yaml:"name,omitempty"`
+	Excludes []string `yaml:"excludes,omitempty"`
 }
 
 type Config struct {
-	GlobalExclude []string
-	Repos         []Repo
+	GlobalExcludes []string `yaml:"global_excludes,omitempty"`
+	Repos          []Repo   `yaml:"repos,omitempty"`
 }
 
 func defaultExcludes() []string {
 	return []string{".git", "target", "__pyenv__", ".DS_Store"}
+}
+
+func loadConfig() (Config, error) {
+	configFile := filepath.Join(xdg.ConfigHome, "reposync/reposync.yaml")
+
+	_, err := os.Stat(configFile)
+	if os.IsNotExist(err) {
+		cfg := Config{
+			GlobalExcludes: defaultExcludes(),
+		}
+		data, err := yaml.Marshal(cfg)
+		if err != nil {
+			return cfg, err
+		}
+		err = os.Mkdir(filepath.Dir(configFile), 0755)
+		if err != nil {
+			return cfg, err
+		}
+		err = os.WriteFile(configFile, data, 0755)
+		if err != nil {
+			return cfg, err
+		}
+		return cfg, nil
+
+	} else {
+		yamlFile, err := os.ReadFile(configFile)
+		if err != nil {
+			return Config{}, err
+		}
+		cfg := Config{}
+		err = yaml.Unmarshal(yamlFile, &cfg)
+		if err != nil {
+			return Config{}, err
+		}
+		return cfg, nil
+	}
+}
+
+func CurrentRepoPath() (string, error) {
+	var repoPath string
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	dirToSearch := cwd
+	for repoPath == "" {
+		_, err := os.Stat(filepath.Join(dirToSearch, ".git"))
+		if err == nil {
+			return dirToSearch, nil
+		}
+		dirToSearch = filepath.Dir(dirToSearch)
+		if dirToSearch == "/" || dirToSearch == "." {
+			repoPath = cwd
+			log.Println("failed to find a git repo, using current working dir")
+		}
+	}
+	return repoPath, nil
 }
 
 func App() {
@@ -34,6 +93,12 @@ func App() {
 	if err := checkForRsync(); err != nil {
 		log.Fatalf("Failed to find rsync command")
 	}
+
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config %+v", err)
+	}
+	log.Printf("%#v", cfg)
 
 	flags := []cli.Flag{
 		&cli.BoolFlag{
@@ -88,27 +153,6 @@ func App() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func CurrentRepoPath() (string, error) {
-	var repoPath string
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	dirToSearch := cwd
-	for repoPath == "" {
-		_, err := os.Stat(filepath.Join(dirToSearch, ".git"))
-		if err == nil {
-			return dirToSearch, nil
-		}
-		dirToSearch = filepath.Dir(dirToSearch)
-		if dirToSearch == "/" || dirToSearch == "." {
-			repoPath = cwd
-			log.Println("failed to find a git repo, using current working dir")
-		}
-	}
-	return repoPath, nil
 }
 
 func checkForRsync() error {
