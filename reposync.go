@@ -1,4 +1,4 @@
-package reposync
+package main
 
 import (
 	"log"
@@ -7,83 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	xdg "github.com/adrg/xdg"
 	cli "github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
 )
 
-type Repo struct {
-	Name     string   `yaml:"name,omitempty"`
-	Excludes []string `yaml:"excludes,omitempty"`
-}
-
-type Config struct {
-	GlobalExcludes []string `yaml:"global_excludes,omitempty"`
-	Repos          []Repo   `yaml:"repos,omitempty"`
-}
-
-func defaultExcludes() []string {
-	return []string{".git", "target", "__pyenv__", ".DS_Store"}
-}
-
-func loadConfig() (Config, error) {
-	configFile := filepath.Join(xdg.ConfigHome, "reposync/reposync.yaml")
-
-	_, err := os.Stat(configFile)
-	if os.IsNotExist(err) {
-		cfg := Config{
-			GlobalExcludes: defaultExcludes(),
-		}
-		data, err := yaml.Marshal(cfg)
-		if err != nil {
-			return cfg, err
-		}
-		err = os.Mkdir(filepath.Dir(configFile), 0755)
-		if err != nil {
-			return cfg, err
-		}
-		err = os.WriteFile(configFile, data, 0755)
-		if err != nil {
-			return cfg, err
-		}
-		return cfg, nil
-
-	} else {
-		yamlFile, err := os.ReadFile(configFile)
-		if err != nil {
-			return Config{}, err
-		}
-		cfg := Config{}
-		err = yaml.Unmarshal(yamlFile, &cfg)
-		if err != nil {
-			return Config{}, err
-		}
-		return cfg, nil
-	}
-}
-
-func CurrentRepoPath() (string, error) {
-	var repoPath string
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	dirToSearch := cwd
-	for repoPath == "" {
-		_, err := os.Stat(filepath.Join(dirToSearch, ".git"))
-		if err == nil {
-			return dirToSearch, nil
-		}
-		dirToSearch = filepath.Dir(dirToSearch)
-		if dirToSearch == "/" || dirToSearch == "." {
-			repoPath = cwd
-			log.Println("failed to find a git repo, using current working dir")
-		}
-	}
-	return repoPath, nil
-}
-
-func App() {
+func main() {
 	repoPath, err := CurrentRepoPath()
 	if err != nil {
 		log.Fatalf("Encountered an error when finding repo path: %+v", err)
@@ -117,7 +44,6 @@ func App() {
 				host := ctx.Args().Get(0)
 				dryRun := ctx.Bool("dry-run")
 				excludes := defaultExcludes()
-
 				return executeRsync(
 					repoPath,
 					strings.Join([]string{host, ":", projectName, "/"}, ""),
@@ -127,15 +53,13 @@ func App() {
 			},
 		},
 		{
-			Name:    "pull",
-			Aliases: []string{"y"},
-			Usage:   "Get files from remote host",
-			Flags:   flags,
+			Name:  "pull",
+			Usage: "Get files from remote host",
+			Flags: flags,
 			Action: func(ctx *cli.Context) error {
 				host := ctx.Args().Get(0)
 				dryRun := ctx.Bool("dry-run")
 				excludes := defaultExcludes()
-
 				return executeRsync(
 					strings.Join([]string{host, ":", projectName, "/"}, ""),
 					repoPath,
@@ -155,19 +79,27 @@ func App() {
 	}
 }
 
-func checkForRsync() error {
-	command := exec.Command(
-		"rsync",
-		"--version",
-	)
-	err := command.Run()
-	return err
-}
-
 func executeRsync(src string, target string, dryRun bool, excludes []string) error {
+	log.Printf("rsync %s %s", src, target)
+	formatted_excludes := formatExcludes(excludes)
+	args := []string{
+		src,
+		target,
+		"-az",
+		"--verbose",
+		"--prune-empty-dirs",
+		"--filter=':-.gitignore'",
+		"--human-readable",
+		"--progress",
+		"--itemize-changes",
+	}
+	args = append(args, formatted_excludes...)
+	if dryRun {
+		args = append(args, "--dry-run")
+	}
 	command := exec.Command(
 		"rsync",
-		"--version",
+		args...,
 	)
 	err := command.Run()
 	return err
