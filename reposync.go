@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -101,7 +102,7 @@ func executeRsync(src string, target string, dryRun bool, excludes []string) err
 		"rsync",
 		args...,
 	)
-	// TODO: setup stdout and stderr pipes
-	err := command.Run()
+	StdoutStderr, err := command.CombinedOutput()
+	fmt.Printf("%s\n", StdoutStderr)
 	return err
 }
