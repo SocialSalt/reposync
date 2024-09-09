@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -17,7 +18,7 @@ func main() {
 		log.Fatalf("Encountered an error when finding repo path: %+v", err)
 	}
 	projectName := filepath.Base(repoPath)
-	log.Println(projectName)
+	log.Printf("Syncing project: %s", projectName)
 	if err := checkForRsync(); err != nil {
 		log.Fatalf("Failed to find rsync command")
 	}
@@ -26,7 +27,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config %+v", err)
 	}
-	log.Printf("%#v", cfg)
+	cfgJson, _ := json.MarshalIndent(cfg, "", "  ")
+	log.Printf("%s", cfgJson)
 
 	flags := []cli.Flag{
 		&cli.BoolFlag{
@@ -81,7 +83,7 @@ func main() {
 }
 
 func executeRsync(src string, target string, dryRun bool, excludes []string) error {
-	log.Printf("rsync %s %s", src, target)
+	log.Printf("rsync from: %s to: %s", src, target)
 	formatted_excludes := formatExcludes(excludes)
 	args := []string{
 		src,
