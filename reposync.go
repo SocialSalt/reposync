@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -91,7 +92,7 @@ func executeRsync(src string, target string, dryRun bool, excludes []string) err
 		"-az",
 		"--verbose",
 		"--prune-empty-dirs",
-		"--filter=':-.gitignore'",
+		"--exclude-from=.gitignore",
 		"--human-readable",
 		"--progress",
 		"--itemize-changes",
@@ -104,7 +105,22 @@ func executeRsync(src string, target string, dryRun bool, excludes []string) err
 		"rsync",
 		args...,
 	)
-	StdoutStderr, err := command.CombinedOutput()
-	fmt.Printf("%s\n", StdoutStderr)
+	stderr, err := command.StderrPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := command.Start(); err != nil {
+		log.Fatal(err)
+	}
+	stderr_vals, _ := io.ReadAll(stderr)
+	stdout_vals, _ := io.ReadAll(stdout)
+
+	fmt.Fprintf(os.Stderr, "%s\n", string(stderr_vals))
+	fmt.Printf("%s\n", stdout_vals)
+	err = command.Wait()
 	return err
 }
