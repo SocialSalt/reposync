@@ -19,7 +19,7 @@ type Config struct {
 }
 
 func defaultExcludes() []string {
-	return []string{".git", "target", "__pyenv__", ".DS_Store"}
+	return []string{".git", "target", "__pycache__", ".DS_Store"}
 }
 
 func loadConfig() (Config, error) {
