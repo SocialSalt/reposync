@@ -72,3 +72,6 @@ Noe that we use the `--exclude-from=.gitignore` so reposync will also ignore any
 If for example you are in `/path/to/project/some/sub/dir` and you run `reposync push host` it will sync from `/path/to/project` as long as `/path/to/project/.git` exists.
 
 `reposync` allows for easy management of different `rsync` exclude settings between different repos, so you don't need to copy and paste different `rsync` commands or edit the same command based on which repo you want to sync.
+
+If those two things don't make reposync seem helpful then it's probably not for you.
+`reposync` has been a fun little project that eases some of my workflows, let me learn more go, and learn a little about making a cli tool.
