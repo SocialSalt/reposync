@@ -21,6 +21,7 @@ type Repo struct {
 }
 
 type Config struct {
+	Debug          bool     `yaml:"debug"`
 	GlobalExcludes []string `yaml:"global_excludes,omitempty"`
 	Repos          []Repo   `yaml:"repos,omitempty"`
 }
@@ -30,6 +31,8 @@ reposync will always ignore patterns that appear in the `global_excludes` list, 
 Here is an example config file.
 
 ```yaml
+debug: false
+
 global_excludes:
 - .git
 - target
@@ -55,21 +58,23 @@ If there is no config file found, then `reposync` will exclude the following dir
 `reposync` uses the following flags on `rsync`
 
 ```console
--az
 --verbose
+--archive
+--compress
+--progress
+--human-readable
+--itemize-changes
 --prune-empty-dirs
 --exclude-from=.gitignore
---human-readable
---progress
---itemize-changes
 ```
-Noe that we use the `--exclude-from=.gitignore` so reposync will also ignore any pattern in the `.gitignore` file.
+Note that we use the `--exclude-from=.gitignore` so reposync will also ignore any pattern in the `.gitignore` file.
 
 
 ## Why should you use it
 
-`reposync` automatticaly finds the root of your current project.
+`reposync` automatically finds the root of your current project.
 If for example you are in `/path/to/project/some/sub/dir` and you run `reposync push host` it will sync from `/path/to/project` as long as `/path/to/project/.git` exists.
+If `reposync` cannot find a `.git` file then it will just sync from the current directory.
 
 `reposync` allows for easy management of different `rsync` exclude settings between different repos, so you don't need to copy and paste different `rsync` commands or edit the same command based on which repo you want to sync.
 
