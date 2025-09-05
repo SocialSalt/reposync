@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"log/slog"
@@ -13,8 +12,6 @@ import (
 
 	cli "github.com/urfave/cli/v3"
 )
-
-var debugMode = flag.Bool("verbose", false, "Enable debug logging")
 
 func main() {
 	cfg, err := loadConfig()
