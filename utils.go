@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,15 +27,16 @@ func CurrentRepoPath() (string, error) {
 	for repoPath == "" {
 		_, err := os.Stat(filepath.Join(dirToSearch, ".git"))
 		if err == nil {
-			return dirToSearch, nil
+			repoPath = dirToSearch
+			break
 		}
 		dirToSearch = filepath.Dir(dirToSearch)
 		if dirToSearch == "/" || dirToSearch == "." {
 			repoPath = cwd
-			log.Println("failed to find a git repo, using current working dir")
+			slog.Info("failed to find a git repo, using current working dir")
 		}
 	}
-	return repoPath, nil
+	return repoPath + "/", nil
 }
 
 func formatExcludes(excludes []string) (formatted_excludes []string) {

@@ -14,6 +14,7 @@ type Repo struct {
 }
 
 type Config struct {
+	Debug          bool     `yaml:"debug"`
 	GlobalExcludes []string `yaml:"global_excludes,omitempty"`
 	Repos          []Repo   `yaml:"repos,omitempty"`
 }
